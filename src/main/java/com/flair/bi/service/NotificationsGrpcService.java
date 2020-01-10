@@ -1,16 +1,27 @@
 package com.flair.bi.service;
 
+import com.flair.bi.messages.report.AddEmailConfigsRequest;
+import com.flair.bi.messages.report.AddEmailConfigsResponse;
+import com.flair.bi.messages.report.AddTeamConfigsRequest;
+import com.flair.bi.messages.report.AddTeamConfigsResponse;
 import com.flair.bi.messages.report.ChannelParameters;
 import com.flair.bi.messages.report.ConnectionProperties;
+import com.flair.bi.messages.report.DeleteChannelConfigRequest;
+import com.flair.bi.messages.report.DeleteChannelConfigResponse;
 import com.flair.bi.messages.report.DeleteScheduledReportRequest;
 import com.flair.bi.messages.report.Email;
+import com.flair.bi.messages.report.EmailParameters;
 import com.flair.bi.messages.report.ExecuteReportRequest;
 import com.flair.bi.messages.report.ExecuteReportResponse;
 import com.flair.bi.messages.report.GetChannelPropertiesRequest;
 import com.flair.bi.messages.report.GetChannelPropertiesResponse;
+import com.flair.bi.messages.report.GetEmailConfigRequest;
+import com.flair.bi.messages.report.GetEmailConfigResponse;
 import com.flair.bi.messages.report.GetScheduleReportLogsRequest;
 import com.flair.bi.messages.report.GetScheduleReportLogsResponse;
 import com.flair.bi.messages.report.GetScheduledReportRequest;
+import com.flair.bi.messages.report.GetTeamConfigRequest;
+import com.flair.bi.messages.report.GetTeamConfigResponse;
 import com.flair.bi.messages.report.RepUserCountReq;
 import com.flair.bi.messages.report.RepUserCountResp;
 import com.flair.bi.messages.report.RepUserReq;
@@ -23,9 +34,15 @@ import com.flair.bi.messages.report.ScheduleReportRequest;
 import com.flair.bi.messages.report.ScheduleReportResponse;
 import com.flair.bi.messages.report.SearchReportsRequest;
 import com.flair.bi.messages.report.SearchReportsResponse;
+import com.flair.bi.messages.report.TeamConfigParameters;
+import com.flair.bi.messages.report.UpdateEmailSMTPRequest;
+import com.flair.bi.messages.report.UpdateEmailSMTPResponse;
+import com.flair.bi.messages.report.UpdateTeamWebhookURLRequest;
+import com.flair.bi.messages.report.UpdateTeamWebhookURLResponse;
 import com.flair.bi.service.dto.scheduler.AssignReport;
 import com.flair.bi.service.dto.scheduler.CommunicationList;
 import com.flair.bi.service.dto.scheduler.ConnectionPropertiesDTO;
+import com.flair.bi.service.dto.scheduler.EmailConfigParametersDTO;
 import com.flair.bi.service.dto.scheduler.GetChannelConnectionDTO;
 import com.flair.bi.service.dto.scheduler.ChannelParametersDTO;
 import com.flair.bi.service.dto.scheduler.GetSchedulerReportDTO;
@@ -36,6 +53,7 @@ import com.flair.bi.service.dto.scheduler.ReportLineItem;
 import com.flair.bi.service.dto.scheduler.Schedule;
 import com.flair.bi.service.dto.scheduler.SchedulerNotificationDTO;
 import com.flair.bi.service.dto.scheduler.SchedulerReportsDTO;
+import com.flair.bi.service.dto.scheduler.TeamConfigParametersDTO;
 import com.flair.bi.service.dto.scheduler.emailsDTO;
 import com.flair.bi.websocket.grpc.config.ManagedChannelFactory;
 import io.grpc.ManagedChannel;
@@ -187,42 +205,6 @@ public class NotificationsGrpcService implements INotificationsGrpcService {
                 .build();
     }
     
-    @Override
-    public GetChannelConnectionDTO getChannelParameters(String channel){
-    	GetChannelPropertiesResponse response=getReportStub().getChannelProperties(GetChannelPropertiesRequest.newBuilder().setChannel(channel).build());
-    	return GetChannelConnectionDTO.builder().channelParameters(toChannelParametersDTO(response.getChannelParametersList())).build();
-    }
-    
-    private List<ChannelParametersDTO> toChannelParametersDTO(List<ChannelParameters> list) {
-        return list.stream()
-                .map(item -> createChannelParametersDTO(item))
-                .collect(toList());
-    }
-    
-    private List<ConnectionPropertiesDTO> toConnectionPropertiesDTO(List<ConnectionProperties> list) {
-        return list.stream()
-                .map(item -> createConnectionPropertiesDTO(item))
-                .collect(toList());
-    }
-        
-    private ChannelParametersDTO createChannelParametersDTO(ChannelParameters channelParameters){
-    	ChannelParametersDTO channelParametersDTO= new ChannelParametersDTO();
-    	channelParametersDTO.setConnectionProperties(toConnectionPropertiesDTO(channelParameters.getConnectionPropertiesList()));
-    	channelParametersDTO.setId(channelParameters.getId());
-    	return channelParametersDTO;
-    }
-    
-    private ConnectionPropertiesDTO createConnectionPropertiesDTO(ConnectionProperties connectionProperties){
-    	ConnectionPropertiesDTO connectionPropertiesDTO= new ConnectionPropertiesDTO();
-    	connectionPropertiesDTO.setDisplayName(connectionProperties.getDisplayName());
-    	connectionPropertiesDTO.setFieldName(connectionProperties.getFieldName());
-    	connectionPropertiesDTO.setFieldType(connectionProperties.getFieldType());
-    	connectionPropertiesDTO.setOrder(connectionProperties.getOrder());
-    	connectionPropertiesDTO.setRequired(connectionProperties.getRequired());
-		return connectionPropertiesDTO;
-    }
-    
-
     private List<SchedulerNotificationDTO> toReportsDto(List<ScheduleReport> list) {
         return list.stream()
                 .map(item -> createSchedulerNotificationDTO(item))
@@ -356,5 +338,135 @@ public class NotificationsGrpcService implements INotificationsGrpcService {
         emailsDTO.setUser_name(item.getUserName());
         return emailsDTO;
     }
+
+	@Override
+	public GetChannelConnectionDTO getChannelParameters(String channel) {
+		GetChannelPropertiesResponse response = getReportStub()
+				.getChannelProperties(GetChannelPropertiesRequest.newBuilder().setChannel(channel).build());
+		return GetChannelConnectionDTO.builder()
+				.channelParameters(toChannelParametersDTO(response.getChannelParametersList())).build();
+	}
+
+	private List<ChannelParametersDTO> toChannelParametersDTO(List<ChannelParameters> list) {
+		return list.stream().map(item -> createChannelParametersDTO(item)).collect(toList());
+	}
+
+	private List<ConnectionPropertiesDTO> toConnectionPropertiesDTO(List<ConnectionProperties> list) {
+		return list.stream().map(item -> createConnectionPropertiesDTO(item)).collect(toList());
+	}
+
+	private ChannelParametersDTO createChannelParametersDTO(ChannelParameters channelParameters) {
+		ChannelParametersDTO channelParametersDTO = new ChannelParametersDTO();
+		channelParametersDTO
+				.setConnectionProperties(toConnectionPropertiesDTO(channelParameters.getConnectionPropertiesList()));
+		channelParametersDTO.setId(channelParameters.getId());
+		return channelParametersDTO;
+	}
+
+	private ConnectionPropertiesDTO createConnectionPropertiesDTO(ConnectionProperties connectionProperties) {
+		ConnectionPropertiesDTO connectionPropertiesDTO = new ConnectionPropertiesDTO();
+		connectionPropertiesDTO.setDisplayName(connectionProperties.getDisplayName());
+		connectionPropertiesDTO.setFieldName(connectionProperties.getFieldName());
+		connectionPropertiesDTO.setFieldType(connectionProperties.getFieldType());
+		connectionPropertiesDTO.setOrder(connectionProperties.getOrder());
+		connectionPropertiesDTO.setRequired(connectionProperties.getRequired());
+		return connectionPropertiesDTO;
+	}
+
+	@Override
+	public String createTeamConfig(TeamConfigParametersDTO teamConfigParametersDTO) {
+		AddTeamConfigsResponse response = getReportStub().addTeamConfigs(AddTeamConfigsRequest.newBuilder()
+				.setTeamConfigParameter(toTeamConfigParameters(teamConfigParametersDTO)).build());
+		return response.getMessage();
+	}
+
+	@Override
+	public String updateTeamConfig(TeamConfigParametersDTO teamConfigParametersDTO) {
+		UpdateTeamWebhookURLResponse response = getReportStub().updateTeamWebhookURL(UpdateTeamWebhookURLRequest
+				.newBuilder().setTeamConfigParameter(toUpdateTeamConfigParameters(teamConfigParametersDTO)).build());
+		return response.getMessage();
+	}
+
+	private TeamConfigParameters toTeamConfigParameters(TeamConfigParametersDTO teamConfigParametersDTO) {
+		return TeamConfigParameters.newBuilder().setWebhookName(teamConfigParametersDTO.getWebhookName())
+				.setWebhookURL(teamConfigParametersDTO.getWebhookURL()).build();
+	}
+
+	private TeamConfigParameters toUpdateTeamConfigParameters(TeamConfigParametersDTO teamConfigParametersDTO) {
+		return TeamConfigParameters.newBuilder().setWebhookName(teamConfigParametersDTO.getWebhookName())
+				.setWebhookURL(teamConfigParametersDTO.getWebhookURL()).setId(teamConfigParametersDTO.getId()).build();
+	}
+
+	@Override
+	public String createEmailConfig(EmailConfigParametersDTO emailConfigParametersDTO) {
+		AddEmailConfigsResponse response = getReportStub().addEmailConfigs(AddEmailConfigsRequest.newBuilder()
+				.setEmailParameter(toEmailConfigParameters(emailConfigParametersDTO)).build());
+		return response.getMessage();
+	}
+
+	private EmailParameters toEmailConfigParameters(EmailConfigParametersDTO emailConfigParametersDTO) {
+		return EmailParameters.newBuilder().setHost(emailConfigParametersDTO.getHost())
+				.setPassword(emailConfigParametersDTO.getPassword()).setPort(emailConfigParametersDTO.getPort())
+				.setSender(emailConfigParametersDTO.getSender()).setUser(emailConfigParametersDTO.getUser()).build();
+	}
+
+	@Override
+	public String updateEmailConfig(EmailConfigParametersDTO emailConfigParametersDTO) {
+		UpdateEmailSMTPResponse response = getReportStub().updateEmailSMTP(UpdateEmailSMTPRequest.newBuilder()
+				.setEmailParameter(toUpdateEmailConfigParameters(emailConfigParametersDTO)).build());
+		return response.getMessage();
+	}
+
+	private EmailParameters toUpdateEmailConfigParameters(EmailConfigParametersDTO emailConfigParametersDTO) {
+		return EmailParameters.newBuilder().setHost(emailConfigParametersDTO.getHost())
+				.setPassword(emailConfigParametersDTO.getPassword()).setPort(emailConfigParametersDTO.getPort())
+				.setSender(emailConfigParametersDTO.getSender()).setUser(emailConfigParametersDTO.getUser())
+				.setId(emailConfigParametersDTO.getId()).build();
+	}
+
+	@Override
+	public EmailConfigParametersDTO getEmailConfig(Integer id) {
+		GetEmailConfigResponse response = getReportStub()
+				.getEmailConfig(GetEmailConfigRequest.newBuilder().setId(id).build());
+		return toEmailConfigParametersDTO(response.getRecord());
+	}
+
+	private EmailConfigParametersDTO toEmailConfigParametersDTO(EmailParameters emailParameters) {
+		EmailConfigParametersDTO emailConfigParametersDTO = new EmailConfigParametersDTO();
+		emailConfigParametersDTO.setHost(emailParameters.getHost());
+		emailConfigParametersDTO.setId(emailParameters.getId());
+		emailConfigParametersDTO.setPassword(emailParameters.getPassword());
+		emailConfigParametersDTO.setPort(emailParameters.getPort());
+		emailConfigParametersDTO.setSender(emailParameters.getSender());
+		emailConfigParametersDTO.setUser(emailParameters.getUser());
+		return emailConfigParametersDTO;
+	}
+
+	@Override
+	public List<TeamConfigParametersDTO> getTeamConfig(Integer id) {
+		GetTeamConfigResponse response = getReportStub()
+				.getTeamConfig(GetTeamConfigRequest.newBuilder().setId(id).build());
+		return toTeamConfigParametersDTOList(response.getRecordsList());
+	}
+
+	private List<TeamConfigParametersDTO> toTeamConfigParametersDTOList(List<TeamConfigParameters> list) {
+		return list.stream().map(item -> toTeamConfigParametersDTO(item)).collect(toList());
+
+	}
+
+	private TeamConfigParametersDTO toTeamConfigParametersDTO(TeamConfigParameters teamConfigParameters) {
+		TeamConfigParametersDTO teamConfigParametersDTO = new TeamConfigParametersDTO();
+		teamConfigParametersDTO.setWebhookName(teamConfigParameters.getWebhookName());
+		teamConfigParametersDTO.setWebhookURL(teamConfigParameters.getWebhookURL());
+		teamConfigParametersDTO.setId(teamConfigParameters.getId());
+		return teamConfigParametersDTO;
+	}
+
+	@Override
+	public String deleteChannelConfig(Integer id) {
+		DeleteChannelConfigResponse response = getReportStub()
+				.deleteChannelConfig(DeleteChannelConfigRequest.newBuilder().setId(id).build());
+		return response.getMessage();
+	}
 
 }
