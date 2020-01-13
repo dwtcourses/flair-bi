@@ -37,27 +37,43 @@
 
         vm.deleteWebhook = deleteWebhook;
         vm.openTeamConfigDialog = openTeamConfigDialog;
+        vm.reportManagementTabClick = reportManagementTabClick;
+        vm.getWebhookList = getWebhookList;
         vm.openCalendar = openCalendar;
         vm.datePickerOpenStatus = {};
         vm.datePickerOpenStatus.fromDate = false;
         vm.datePickerOpenStatus.toDate = false;
         vm.webhookList = [];
+        vm.SMPTSetting = {};
         vm.dateFormat = 'yyyy-MM-dd';
         vm.user = null;
         vm.emailChannelConfig = [];
         vm.teamChannelConfig = [];
-        vm.connection;
+        vm.connection = {};
 
         activate();
         ///////////////////////////////////////
 
         function activate() {
-            getAccount();
-            getScheduledReports(vm.account.login, "", "", "");
-            channelParameters();
-            getWebhookList();
+            reportManagementTabClick('report');
             var cronstrue = window.cronstrue;
+        }
 
+        function reportManagementTabClick(tabName) {
+            if (tabName == "report") {
+                getAccount();
+                getScheduledReports(vm.account.login, "", "", "");
+            }
+            else if (tabName == "configuration") {
+                channelParameters();
+                getSMTPSettings();
+            }
+            else if (tabName == "email") {
+                getSMTPSettings();
+            }
+            else if (tabName == "team") {
+                getWebhookList();
+            }
         }
 
         function getAccount() {
@@ -160,10 +176,11 @@
 
         function saveSMTPSetting() {
             var SMPTConfig = {
+                user: vm.connection.details.user,
                 host: vm.connection.details.host,
                 sender: vm.connection.details.sender,
                 port: parseInt(vm.connection.details.port),
-                userName: vm.connection.details.port,
+
                 password: vm.connection.details.password,
             }
             schedulerService.createEmailConfig(SMPTConfig)
@@ -184,38 +201,31 @@
 
         }
         function getWebhookList() {
-            vm.webhookList = [
-                {
-                    "id": 2,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                },
-                {
-                    "id": 3,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                },
-                {
-                    "id": 2,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                },
-                {
-                    "id": 3,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                },
-                {
-                    "id": 2,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                },
-                {
-                    "id": 3,
-                    "webhookName": "test",
-                    "webhookURL": "https://outlook.office.com/webhook/f79eb495-6984-4ca3-bf67-5357e4f9edd5@2c081cf3-e47d-4c70-a618-68662c113c38/IncomingWebhook/bdfe8e5ad6474809b593c363d1be3385/90ac3273-dc32-484d-ba49-b6ea1b4fcd4f"
-                }
-            ]
+            schedulerService.getTeamConfig(0)
+                .then(function (success) {
+                    vm.webhookList = success.data;
+
+                }).catch(function (error) {
+                    var info = {
+                        text: error.data.message,
+                        title: "Error"
+                    }
+                    $rootScope.showErrorSingleToast(info);
+                });
+        }
+        function getSMTPSettings() {
+            schedulerService.getEmailConfig(0)
+                .then(function (success) {
+                    vm.SMPTSetting = success.data;
+                    vm.connection.details = vm.SMPTSetting;
+
+                }).catch(function (error) {
+                    var info = {
+                        text: error.data.message,
+                        title: "Error"
+                    }
+                    $rootScope.showErrorSingleToast(info);
+                });
         }
         function openTeamConfigDialog(webhook) {
             $uibModal.open({
@@ -238,20 +248,32 @@
 
         function deleteWebhook(webhook) {
             swal(
-                "Are you sure?",
-                "You want to delete " + webhook.webhookName + " webhook URL", {
+                "Are you sure?",
+                "You want to delete " + webhook.webhookName + " webhook URL", {
                 dangerMode: true,
                 buttons: true,
             })
                 .then(function (value) {
                     if (value) {
                         if (webhook.id) {
+                            schedulerService.deleteChannelConfig(webhook.id)
+                                .then(function (success) {
+                                    var info = {
+                                        text: "Webhook delete successfully",
+                                        title: "Updated"
+                                    }
+                                    getWebhookList();
+                                    $rootScope.showSuccessToast(info);
 
+                                }).catch(function (error) {
+                                    var info = {
+                                        text: error.data.message,
+                                        title: "Error"
+                                    }
+                                    $rootScope.showErrorSingleToast(info);
+                                });
 
-                        } else {
-                            loadFeatures();
                         }
-                        $scope.$apply();
                     } else {
                         return false;
                     }

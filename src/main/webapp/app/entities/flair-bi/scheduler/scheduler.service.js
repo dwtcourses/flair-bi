@@ -22,7 +22,10 @@
             createTeamConfig: createTeamConfig,
             updateTeamConfig: updateTeamConfig,
             createEmailConfig: createEmailConfig,
-            updateEmailConfig: updateEmailConfig
+            updateEmailConfig: updateEmailConfig,
+            getEmailConfig: getEmailConfig,
+            getTeamConfig: getTeamConfig,
+            deleteChannelConfig: deleteChannelConfig
         };
 
         return service;
@@ -120,6 +123,24 @@
                 url: 'api/notification/updateEmailConfig',
                 method: 'PUT',
                 data: body
+            });
+        }
+        function getEmailConfig(id) {
+            return $http({
+                url: 'api/notification/getEmailConfig/?id=' + id + '',
+                method: 'GET'
+            });
+        }
+        function getTeamConfig(id) {
+            return $http({
+                url: 'api/notification/getTeamConfig/?id=' + id + '',
+                method: 'GET'
+            });
+        }
+        function deleteChannelConfig(id) {
+            return $http({
+                url: 'api/notification/deleteChannelConfig/?id=' + id + '',
+                method: 'DELETE'
             });
         }
     }
